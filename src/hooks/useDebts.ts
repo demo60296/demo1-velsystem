@@ -12,7 +12,8 @@ import {
   PaginatedDebts,
   PaginatedDebtRecords,
   DebtRecordSummary,
-  DebtSummary
+  DebtSummary,
+  DebtTransaction
 } from '../types/debt';
 
 // Debt hooks
@@ -189,7 +190,84 @@ export const useDeleteDebt = () => {
   });
 };
 
-// Debt Records hooks
+// Debt Transaction hooks (new API endpoints)
+export const useAllDebtTransactions = (page = 0, size = 10, enabled = true) => {
+  return useQuery<{ content: DebtTransaction[]; totalElements: number; totalPages: number; size: number; number: number; first: boolean; last: boolean }>({
+    queryKey: ['debt-transactions', 'all', page, size],
+    queryFn: async () => {
+      const response = await apiClient.get(`/transactions/debt/all?page=${page}&size=${size}`);
+      return response.data.data || {
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        size: size,
+        number: page,
+        first: true,
+        last: true
+      };
+    },
+    enabled,
+  });
+};
+
+export const usePaidDebtTransactions = (page = 0, size = 10, enabled = true) => {
+  return useQuery<{ content: DebtTransaction[]; totalElements: number; totalPages: number; size: number; number: number; first: boolean; last: boolean }>({
+    queryKey: ['debt-transactions', 'paid', page, size],
+    queryFn: async () => {
+      const response = await apiClient.get(`/transactions/debt/paid?page=${page}&size=${size}`);
+      return response.data.data || {
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        size: size,
+        number: page,
+        first: true,
+        last: true
+      };
+    },
+    enabled,
+  });
+};
+
+export const useReceivedDebtTransactions = (page = 0, size = 10, enabled = true) => {
+  return useQuery<{ content: DebtTransaction[]; totalElements: number; totalPages: number; size: number; number: number; first: boolean; last: boolean }>({
+    queryKey: ['debt-transactions', 'received', page, size],
+    queryFn: async () => {
+      const response = await apiClient.get(`/transactions/debt/received?page=${page}&size=${size}`);
+      return response.data.data || {
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        size: size,
+        number: page,
+        first: true,
+        last: true
+      };
+    },
+    enabled,
+  });
+};
+
+export const useAdjustmentDebtTransactions = (page = 0, size = 10, enabled = true) => {
+  return useQuery<{ content: DebtTransaction[]; totalElements: number; totalPages: number; size: number; number: number; first: boolean; last: boolean }>({
+    queryKey: ['debt-transactions', 'adjustment', page, size],
+    queryFn: async () => {
+      const response = await apiClient.get(`/transactions/debt/adjustment?page=${page}&size=${size}`);
+      return response.data.data || {
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        size: size,
+        number: page,
+        first: true,
+        last: true
+      };
+    },
+    enabled,
+  });
+};
+
+// Legacy debt records hooks (keeping for backward compatibility)
 export const useDebtRecords = (debtId: string, page = 0, size = 10) => {
   return useQuery<PaginatedDebtRecords>({
     queryKey: ['debt-records', debtId, page, size],
@@ -308,6 +386,7 @@ export const useCreateDebtRecord = () => {
       queryClient.invalidateQueries({ queryKey: ['debt-records', debtId] });
       queryClient.invalidateQueries({ queryKey: ['debt-record-summary', debtId] });
       queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['debt-transactions'] });
       addToast({
         type: 'success',
         message: 'Record created'
@@ -335,6 +414,7 @@ export const useUpdateDebtRecord = () => {
       queryClient.invalidateQueries({ queryKey: ['debt-records'] });
       queryClient.invalidateQueries({ queryKey: ['debt-record-summary'] });
       queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['debt-transactions'] });
       addToast({
         type: 'success',
         message: 'Record updated'
@@ -361,6 +441,7 @@ export const useDeleteDebtRecord = () => {
       queryClient.invalidateQueries({ queryKey: ['debt-records'] });
       queryClient.invalidateQueries({ queryKey: ['debt-record-summary'] });
       queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['debt-transactions'] });
       addToast({
         type: 'success',
         message: 'Record deleted'
@@ -370,6 +451,209 @@ export const useDeleteDebtRecord = () => {
       addToast({
         type: 'error',
         message: 'Failed to delete record'
+      });
+    },
+  });
+};
+
+// New debt transaction mutations
+export const useCreatePaidDebtTransaction = () => {
+  const queryClient = useQueryClient();
+  const { addToast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ debtId, data }: { debtId: string; data: CreateDebtRecordData }) => {
+      const requestData = {
+        type: data.type,
+        txnDate: data.date,
+        txnTime: data.time ? `${data.time.hour.toString().padStart(2, '0')}:${data.time.minute.toString().padStart(2, '0')}:${data.time.second.toString().padStart(2, '0')}` : '00:00:00',
+        amount: data.amount,
+        description: data.description,
+        accountId: data.accountId,
+        paymentModeId: data.paymentModeId
+      };
+      const response = await apiClient.post(`/transactions/debt/${debtId}/paid`, requestData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['debt-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      addToast({
+        type: 'success',
+        message: 'Payment recorded'
+      });
+    },
+    onError: () => {
+      addToast({
+        type: 'error',
+        message: 'Failed to record payment'
+      });
+    },
+  });
+};
+
+export const useCreateReceivedDebtTransaction = () => {
+  const queryClient = useQueryClient();
+  const { addToast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ debtId, data }: { debtId: string; data: CreateDebtRecordData }) => {
+      const requestData = {
+        type: data.type,
+        txnDate: data.date,
+        txnTime: data.time ? `${data.time.hour.toString().padStart(2, '0')}:${data.time.minute.toString().padStart(2, '0')}:${data.time.second.toString().padStart(2, '0')}` : '00:00:00',
+        amount: data.amount,
+        description: data.description,
+        accountId: data.accountId,
+        paymentModeId: data.paymentModeId
+      };
+      const response = await apiClient.post(`/transactions/debt/${debtId}/received`, requestData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['debt-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      addToast({
+        type: 'success',
+        message: 'Receipt recorded'
+      });
+    },
+    onError: () => {
+      addToast({
+        type: 'error',
+        message: 'Failed to record receipt'
+      });
+    },
+  });
+};
+
+export const useCreateAdjustmentDebtTransaction = () => {
+  const queryClient = useQueryClient();
+  const { addToast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: { type: string; txnDate: string; txnTime: string; amount: number; description: string }) => {
+      const response = await apiClient.post('/transactions/debt/adjustment', data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['debt-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      addToast({
+        type: 'success',
+        message: 'Adjustment recorded'
+      });
+    },
+    onError: () => {
+      addToast({
+        type: 'error',
+        message: 'Failed to record adjustment'
+      });
+    },
+  });
+};
+
+export const useUpdatePaidDebtTransaction = () => {
+  const queryClient = useQueryClient();
+  const { addToast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateDebtRecordData }) => {
+      const requestData = {
+        type: data.type,
+        txnDate: data.date,
+        txnTime: data.time ? {
+          hour: data.time.hour,
+          minute: data.time.minute,
+          second: data.time.second,
+          nano: data.time.nano
+        } : undefined,
+        amount: data.amount,
+        description: data.description,
+        accountId: data.accountId,
+        paymentModeId: data.paymentModeId
+      };
+      const response = await apiClient.put(`/transactions/debt/paid/${id}`, requestData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['debt-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      addToast({
+        type: 'success',
+        message: 'Payment updated'
+      });
+    },
+    onError: () => {
+      addToast({
+        type: 'error',
+        message: 'Failed to update payment'
+      });
+    },
+  });
+};
+
+export const useUpdateReceivedDebtTransaction = () => {
+  const queryClient = useQueryClient();
+  const { addToast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateDebtRecordData }) => {
+      const requestData = {
+        type: data.type,
+        txnDate: data.date,
+        txnTime: data.time ? {
+          hour: data.time.hour,
+          minute: data.time.minute,
+          second: data.time.second,
+          nano: data.time.nano
+        } : undefined,
+        amount: data.amount,
+        description: data.description,
+        accountId: data.accountId,
+        paymentModeId: data.paymentModeId
+      };
+      const response = await apiClient.put(`/transactions/debt/received/${id}`, requestData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['debt-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      addToast({
+        type: 'success',
+        message: 'Receipt updated'
+      });
+    },
+    onError: () => {
+      addToast({
+        type: 'error',
+        message: 'Failed to update receipt'
+      });
+    },
+  });
+};
+
+export const useUpdateAdjustmentDebtTransaction = () => {
+  const queryClient = useQueryClient();
+  const { addToast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { type: string; txnDate: string; txnTime: any; amount: number; description: string } }) => {
+      const response = await apiClient.put(`/transactions/debt/adjustment/${id}`, data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['debt-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      addToast({
+        type: 'success',
+        message: 'Adjustment updated'
+      });
+    },
+    onError: () => {
+      addToast({
+        type: 'error',
+        message: 'Failed to update adjustment'
       });
     },
   });

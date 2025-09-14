@@ -2,7 +2,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Edit } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { useCreateDebtRecord, useUpdateDebtRecord, useDebtRecord } from '../../../hooks/useDebts';
+import { 
+  useCreatePaidDebtTransaction, 
+  useCreateReceivedDebtTransaction,
+  useUpdatePaidDebtTransaction,
+  useUpdateReceivedDebtTransaction,
+  useDebtRecord 
+} from '../../../hooks/useDebts';
 import { useAccounts, useDefaultPaymentMode } from '../../../hooks/useAccounts';
 import { CreateDebtRecordData } from '../../../types/debt';
 import AccountSelectModal from '../../../components/AccountSelectModal';
@@ -31,8 +37,13 @@ function DebtRecordForm() {
   const { data: record, isLoading: recordLoading } = useDebtRecord(recordId || '');
   const { data: accounts = [] } = useAccounts();
   const { data: defaultPaymentMode } = useDefaultPaymentMode();
-  const createRecord = useCreateDebtRecord();
-  const updateRecord = useUpdateDebtRecord();
+  
+  // Use appropriate mutation based on record type
+  const createPaidRecord = useCreatePaidDebtTransaction();
+  const createReceivedRecord = useCreateReceivedDebtTransaction();
+  const updatePaidRecord = useUpdatePaidDebtTransaction();
+  const updateReceivedRecord = useUpdateReceivedDebtTransaction();
+  
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
     defaultValues: {
       date: new Date().toISOString().split('T')[0],
@@ -91,9 +102,19 @@ function DebtRecordForm() {
       };
 
       if (isEditing && recordId) {
-        await updateRecord.mutateAsync({ id: recordId, data: recordData });
+        // Use appropriate update mutation based on record type
+        if (data.type === '1') {
+          await updatePaidRecord.mutateAsync({ id: recordId, data: recordData });
+        } else {
+          await updateReceivedRecord.mutateAsync({ id: recordId, data: recordData });
+        }
       } else if (debtId) {
-        await createRecord.mutateAsync({ debtId, data: recordData });
+        // Use appropriate create mutation based on record type
+        if (data.type === '1') {
+          await createPaidRecord.mutateAsync({ debtId, data: recordData });
+        } else {
+          await createReceivedRecord.mutateAsync({ debtId, data: recordData });
+        }
       }
 
       navigate(`/debts/${debtId}/records`);
@@ -102,7 +123,8 @@ function DebtRecordForm() {
     }
   };
 
-  const isPending = createRecord.isPending || updateRecord.isPending;
+  const isPending = createPaidRecord.isPending || createReceivedRecord.isPending || 
+                   updatePaidRecord.isPending || updateReceivedRecord.isPending;
 
   if (isEditing && recordLoading) {
     return (
@@ -317,7 +339,8 @@ function DebtRecordForm() {
         </div>
 
         {/* Error Messages */}
-        {(createRecord.error || updateRecord.error) && (
+        {(createPaidRecord.error || createReceivedRecord.error || 
+          updatePaidRecord.error || updateReceivedRecord.error) && (
           <div className="bg-red-50 border border-red-200 rounded-md p-3 sm:p-4">
             <div className="text-xs sm:text-sm text-red-600">
               Failed to save record. Please try again.

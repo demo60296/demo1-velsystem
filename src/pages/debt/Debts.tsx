@@ -35,9 +35,11 @@ function Debts() {
   const [isDebtTypeModalOpen, setIsDebtTypeModalOpen] = useState(false);
   const [debtToDelete, setDebtToDelete] = useState<{ id: string; name: string } | null>(null);
 
+  // Only fetch data for the active tab to avoid unnecessary API calls
   const { data: allDebts, isLoading: allLoading } = useDebts(currentPage, pageSize);
   const { data: lendingDebts, isLoading: lendingLoading } = useLendingDebts(currentPage, pageSize);
   const { data: borrowingDebts, isLoading: borrowingLoading } = useBorrowingDebts(currentPage, pageSize);
+  
   const deleteDebt = useDeleteDebt();
   const { formatCurrency } = useFormatters();
 

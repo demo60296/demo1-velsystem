@@ -40,6 +40,34 @@ export interface DebtRecord {
   updatedAt: string;
 }
 
+export interface DebtTransaction {
+  id: string;
+  txnDate: string;
+  txnTime: string;
+  amount: number;
+  type: number; // 5 = Paid, 6 = Received, 7 = Adjustment
+  description: string;
+  account?: {
+    id: string;
+    name: string;
+    type: number;
+    default: boolean;
+  };
+  paymentMode?: {
+    id: string;
+    name: string;
+    type: number;
+  } | null;
+  debt: {
+    id: string;
+    personName: string;
+    dueDate: string;
+    amount: number | null;
+    additionalDetail: string;
+    type: number;
+  };
+}
+
 export interface CreateDebtData {
   personName: string;
   dueDate: string;
@@ -136,6 +164,12 @@ export const DEBT_TYPES = {
 export const DEBT_RECORD_TYPES = {
   '1': 'Paid',
   '2': 'Received'
+} as const;
+
+export const DEBT_TRANSACTION_TYPES = {
+  5: 'Paid',
+  6: 'Received', 
+  7: 'Adjustment'
 } as const;
 
 export type DebtType = keyof typeof DEBT_TYPES;

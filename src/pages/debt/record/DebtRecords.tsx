@@ -15,20 +15,23 @@ import {
   MinusCircle,
   PlusCircle,
   Coins,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import {
   useDebt,
-  useDebtRecords,
-  usePaidRecords,
-  useReceivedRecords,
+  useAllDebtTransactions,
+  usePaidDebtTransactions,
+  useReceivedDebtTransactions,
+  useAdjustmentDebtTransactions,
   useDeleteDebtRecord,
 } from '../../../hooks/useDebts';
-import { DEBT_RECORD_TYPES } from '../../../types/debt';
+import { DEBT_TRANSACTION_TYPES } from '../../../types/debt';
 import DebtRecordTypeModal from '../../../components/DebtRecordTypeModal';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 import { useFormatters } from '../../../hooks/useFormatters';
 
-const tabs = ['All', 'Paid', 'Received'];
+const tabs = ['All', 'Paid', 'Received', 'Adjustment'];
 
 function DebtRecords() {
   const { debtId } = useParams<{ debtId: string }>();
@@ -36,27 +39,33 @@ function DebtRecords() {
 
   const [activeTab, setActiveTab] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize] = useState(6);
+  const [pageSize] = useState(10);
   const [isRecordTypeModalOpen, setIsRecordTypeModalOpen] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<{ id: string; description: string } | null>(null);
 
   const { data: debt } = useDebt(debtId || '');
-  const { data: allRecords } = useDebtRecords(debtId || '', currentPage, pageSize);
-  const { data: paidRecords } = usePaidRecords(debtId || '', currentPage, pageSize);
-  const { data: receivedRecords } = useReceivedRecords(debtId || '', currentPage, pageSize);
+  
+  // Only fetch data for the active tab to avoid unnecessary API calls
+  const { data: allTransactions, isLoading: allLoading } = useAllDebtTransactions(currentPage, pageSize, activeTab === 0);
+  const { data: paidTransactions, isLoading: paidLoading } = usePaidDebtTransactions(currentPage, pageSize, activeTab === 1);
+  const { data: receivedTransactions, isLoading: receivedLoading } = useReceivedDebtTransactions(currentPage, pageSize, activeTab === 2);
+  const { data: adjustmentTransactions, isLoading: adjustmentLoading } = useAdjustmentDebtTransactions(currentPage, pageSize, activeTab === 3);
+  
   const deleteRecord = useDeleteDebtRecord();
   const { formatCurrency } = useFormatters();
 
   const getCurrentData = () => {
     switch (activeTab) {
-      case 1: return paidRecords;
-      case 2: return receivedRecords;
-      default: return allRecords;
+      case 1: return { data: paidTransactions, isLoading: paidLoading };
+      case 2: return { data: receivedTransactions, isLoading: receivedLoading };
+      case 3: return { data: adjustmentTransactions, isLoading: adjustmentLoading };
+      default: return { data: allTransactions, isLoading: allLoading };
     }
   };
 
-  const records = getCurrentData()?.content || [];
-  const totalPages = getCurrentData()?.totalPages || 0;
+  const { data: currentData, isLoading } = getCurrentData();
+  const transactions = currentData?.content || [];
+  const totalPages = currentData?.totalPages || 0;
 
   const handleDeleteRecord = async () => {
     if (recordToDelete) {
@@ -65,10 +74,28 @@ function DebtRecords() {
     }
   };
 
-  const getRecordIcon = (type: string) => {
-    if (type === '1') return <TrendingDown className="w-5 h-5 text-red-600" />;
-    if (type === '2') return <TrendingUp className="w-5 h-5 text-green-600" />;
+  const getTransactionIcon = (type: number) => {
+    if (type === 5) return <TrendingDown className="w-5 h-5 text-red-600" />;
+    if (type === 6) return <TrendingUp className="w-5 h-5 text-green-600" />;
+    if (type === 7) return <DollarSign className="w-5 h-5 text-blue-600" />;
     return <DollarSign className="w-5 h-5 text-gray-600" />;
+  };
+
+  const getAmountColor = (type: number) => {
+    if (type === 5) return 'text-red-600';
+    if (type === 6) return 'text-green-600';
+    if (type === 7) return 'text-blue-600';
+    return 'text-gray-600';
+  };
+
+  const formatDateTime = (date: string, time: string) => {
+    const formattedDate = new Date(date).toLocaleDateString();
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    const formattedTime = `${displayHour}:${minutes.padStart(2, '0')} ${period}`;
+    return { date: formattedDate, time: formattedTime };
   };
 
   return (
@@ -163,13 +190,23 @@ function DebtRecords() {
         })}
       </div>
 
-      {/* Records */}
-      {
-        records.length === 0 ? (
+      {/* Transactions */}
+      {isLoading ? (
+        <div className="animate-pulse grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
+          ))}
+        </div>
+      ) : transactions.length === 0 ? (
           <div className="p-10 text-center">
             <Coins className="w-10 h-10 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No records yet</h3>
-            <p className="text-sm text-gray-500 mb-6">Add your first debt record</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No {tabs[activeTab].toLowerCase()} transactions</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              {activeTab === 0 
+                ? 'No debt transactions found'
+                : `No ${tabs[activeTab].toLowerCase()} transactions found`
+              }
+            </p>
             <button
               onClick={() => setIsRecordTypeModalOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl shadow hover:bg-indigo-700 transition"
@@ -180,71 +217,89 @@ function DebtRecords() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {records.map((record) => (
+            {transactions.map((transaction) => {
+              const { date, time } = formatDateTime(transaction.txnDate, transaction.txnTime);
+              return (
               <div
-                key={record.id}
+                key={transaction.id}
                 className="bg-white rounded-xl shadow p-4 flex justify-between items-center hover:shadow-md transition"
               >
-                <div className="flex items-center gap-3">
-                  {getRecordIcon(record.type)}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  {getTransactionIcon(transaction.type)}
                   <div>
-                    <h3 className="font-medium text-gray-900">{record.description}</h3>
+                    <h3 className="font-medium text-gray-900 truncate">{transaction.description}</h3>
                     <p className="text-xs text-gray-500">
-                      {DEBT_RECORD_TYPES[record.type]} • {new Date(record.date).toLocaleDateString()}
+                      {DEBT_TRANSACTION_TYPES[transaction.type as keyof typeof DEBT_TRANSACTION_TYPES]} • {date} at {time}
                     </p>
+                    {transaction.debt && (
+                      <p className="text-xs text-gray-400">
+                        With {transaction.debt.personName}
+                      </p>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Link
-                    to={`/debts/${debtId}/records/edit/${record.id}`}
-                    className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-indigo-600"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Link>
-                  <button
-                    onClick={() => setRecordToDelete({ id: record.id, description: record.description })}
-                    disabled={deleteRecord.isPending}
-                    className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-600 disabled:opacity-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="text-right">
+                    <p className={`text-sm font-semibold ${getAmountColor(transaction.type)}`}>
+                      {transaction.type === 5 ? '-' : transaction.type === 6 ? '+' : ''}
+                      {formatCurrency(transaction.amount)}
+                    </p>
+                    {transaction.account && (
+                      <p className="text-xs text-gray-500">{transaction.account.name}</p>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-1">
+                    <Link
+                      to={`/debts/${debtId}/records/edit/${transaction.id}`}
+                      className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-indigo-600"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Link>
+                    <button
+                      onClick={() => setRecordToDelete({ id: transaction.id, description: transaction.description })}
+                      disabled={deleteRecord.isPending}
+                      className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-600 disabled:opacity-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
-        )
-      }
+        )}
 
       {/* Pagination */}
-      {
-        totalPages > 1 && (
-          <div className="mt-6 flex justify-center items-center gap-3 text-sm text-gray-600">
-            <button
-              disabled={currentPage === 0}
-              onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
-              className="px-3 py-1 rounded-md border hover:bg-gray-50 disabled:opacity-50"
-            >
-              Prev
-            </button>
-            <span>
-              Page {currentPage + 1} of {totalPages}
-            </span>
-            <button
-              disabled={currentPage >= totalPages - 1}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
-              className="px-3 py-1 rounded-md border hover:bg-gray-50 disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        )
-      }
+      {totalPages > 1 && (
+        <div className="mt-6 flex justify-center items-center gap-4">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+            disabled={currentPage === 0}
+            className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-900 disabled:opacity-50"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <span className="text-sm text-gray-500">
+            Page {currentPage + 1} of {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+            disabled={currentPage >= totalPages - 1}
+            className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-900 disabled:opacity-50"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      )}
 
       {/* Modals */}
       <DebtRecordTypeModal
         isOpen={isRecordTypeModalOpen}
         onClose={() => setIsRecordTypeModalOpen(false)}
-        debtId={debtId}
+        debtId={debtId || ''}
       />
       <ConfirmationModal
         isOpen={!!recordToDelete}

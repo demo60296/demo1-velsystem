@@ -1,17 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Calendar, TrendingUp, TrendingDown, ArrowUpDown, Edit, Trash2, Building2, Wallet, CreditCard, Banknote, Smartphone, FileText, Globe } from 'lucide-react';
-import { useDaySummary } from '../../hooks/useSummary';
+import { useTransactionsByDate } from '../../hooks/useTransactionsByDate';
 import { useDeleteTransaction } from '../../hooks/useTransactions';
 import { useFormatters } from '../../hooks/useFormatters';
 import { TRANSACTION_TYPES } from '../../types/transaction';
+import { DEBT_TRANSACTION_TYPES } from '../../types/debt';
+import CategoryIcon from '../../components/CategoryIcon';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import { Link } from 'react-router-dom';
 
 function DayView() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const currentDate = new Date();
   const [transactionToDelete, setTransactionToDelete] = useState<{ id: string; description: string } | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize] = useState(10);
   
   const [currentDay, setCurrentDay] = useState(
     parseInt(searchParams.get('day') || currentDate.getDate().toString())
@@ -23,7 +28,13 @@ function DayView() {
     parseInt(searchParams.get('year') || currentDate.getFullYear().toString())
   );
 
-  const { data: dayData, isLoading } = useDaySummary(currentDay, currentMonth, currentYear);
+  // Format date as YYYY-MM-DD for API
+  const formatDateForAPI = (day: number, month: number, year: number) => {
+    return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+  };
+
+  const currentDateString = formatDateForAPI(currentDay, currentMonth, currentYear);
+  const { data: dayData, isLoading } = useTransactionsByDate(currentDateString, currentPage, pageSize);
   const deleteTransaction = useDeleteTransaction();
   const { formatCurrency } = useFormatters();
 
@@ -34,6 +45,7 @@ function DayView() {
     newSearchParams.set('month', currentMonth.toString());
     newSearchParams.set('year', currentYear.toString());
     navigate(`/views/day?${newSearchParams.toString()}`, { replace: true });
+    setCurrentPage(0); // Reset pagination when date changes
   }, [currentDay, currentMonth, currentYear, navigate]);
 
   const navigateToDay = (direction: 'prev' | 'next') => {
@@ -61,26 +73,35 @@ function DayView() {
     }
   };
 
-  const getTransactionIcon = (type: number | null) => {
+  const getTransactionIcon = (type: number) => {
     switch (type) {
-      case 1: // Expense
+      case 1:
         return <TrendingDown className="w-5 h-5 text-red-600" />;
-      case 2: // Income
+      case 2:
         return <TrendingUp className="w-5 h-5 text-green-600" />;
-      case 3: // Transfer
+      case 3:
+        return <ArrowUpDown className="w-5 h-5 text-blue-600" />;
+      case 5:
+        return <TrendingDown className="w-5 h-5 text-red-600" />;
+      case 6:
+        return <TrendingUp className="w-5 h-5 text-green-600" />;
+      case 7:
         return <ArrowUpDown className="w-5 h-5 text-blue-600" />;
       default:
         return <ArrowUpDown className="w-5 h-5 text-gray-600" />;
     }
   };
 
-  const getAmountColor = (type: number | null) => {
+  const getAmountColor = (type: number) => {
     switch (type) {
-      case 1: // Expense
+      case 1:
+      case 5:
         return 'text-red-600';
-      case 2: // Income
+      case 2:
+      case 6:
         return 'text-green-600';
-      case 3: // Transfer
+      case 3:
+      case 7:
         return 'text-blue-600';
       default:
         return 'text-gray-600';
@@ -89,13 +110,13 @@ function DayView() {
 
   const getAccountIcon = (type: number) => {
     switch (type) {
-      case 1: // Bank
+      case 1:
         return <Building2 className="w-4 h-4 text-blue-600" />;
-      case 2: // Wallet
+      case 2:
         return <Wallet className="w-4 h-4 text-green-600" />;
-      case 3: // Credit Card
+      case 3:
         return <CreditCard className="w-4 h-4 text-purple-600" />;
-      case 4: // Cash
+      case 4:
         return <Banknote className="w-4 h-4 text-yellow-600" />;
       default:
         return <Building2 className="w-4 h-4 text-gray-600" />;
@@ -136,6 +157,21 @@ function DayView() {
     );
   };
 
+  const getTransactionTypeName = (type: number) => {
+    if (type >= 5 && type <= 7) {
+      return DEBT_TRANSACTION_TYPES[type as keyof typeof DEBT_TRANSACTION_TYPES];
+    }
+    return TRANSACTION_TYPES[type.toString() as keyof typeof TRANSACTION_TYPES];
+  };
+
+  const formatTime = (timeString: string) => {
+    const [hours, minutes] = timeString.split(':');
+    const hour = parseInt(hours);
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${displayHour}:${minutes.padStart(2, '0')} ${period}`;
+  };
+
   if (isLoading) {
     return (
       <div className="p-3 sm:p-4 lg:p-6 max-w-7xl mx-auto">
@@ -157,9 +193,9 @@ function DayView() {
     );
   }
 
-  const summary = dayData?.data;
-  const transactions = summary?.transactions || [];
-  const balance = (summary?.income || 0) - (summary?.spending || 0);
+  const transactions = dayData?.transactions?.content || [];
+  const totalPages = dayData?.transactions?.totalPages || 0;
+  const balance = (dayData?.totalIncome || 0) - (dayData?.totalExpense || 0);
 
   return (
     <div className="p-3 sm:p-4 lg:p-6 max-w-7xl mx-auto">
@@ -208,7 +244,7 @@ function DayView() {
             <div>
               <p className="text-sm font-medium text-gray-600">Income</p>
               <p className="text-2xl font-bold text-green-600">
-                {formatCurrency(summary?.income || 0)}
+                {formatCurrency(dayData?.totalIncome || 0)}
               </p>
             </div>
             <div className="bg-green-100 rounded-full p-3">
@@ -222,7 +258,7 @@ function DayView() {
             <div>
               <p className="text-sm font-medium text-gray-600">Spending</p>
               <p className="text-2xl font-bold text-red-600">
-                {formatCurrency(summary?.spending || 0)}
+                {formatCurrency(dayData?.totalExpense || 0)}
               </p>
             </div>
             <div className="bg-red-100 rounded-full p-3">
@@ -255,9 +291,17 @@ function DayView() {
       {/* Transactions List */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-4 sm:p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Transactions ({transactions.length})
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Transactions ({dayData?.transactions?.totalElements || 0})
+            </h2>
+            <Link
+              to="/transactions/add"
+              className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+            >
+              Add Transaction
+            </Link>
+          </div>
         </div>
 
         {transactions.length === 0 ? (
@@ -269,6 +313,13 @@ function DayView() {
             <p className="text-gray-500 mb-4">
               No financial activities recorded for {formatDateString()}
             </p>
+            <Link
+              to="/transactions/add"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition"
+            >
+              <TrendingUp className="w-4 h-4" />
+              Add Transaction
+            </Link>
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
@@ -276,9 +327,17 @@ function DayView() {
               <div key={transaction.id} className="p-3 sm:p-4 lg:p-6 flex items-center justify-between">
                 <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4 flex-1 min-w-0">
                   <div className="flex-shrink-0">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                      {getTransactionIcon(transaction.type)}
-                    </div>
+                    {transaction.category ? (
+                      <CategoryIcon
+                        icon={transaction.category.icon}
+                        color={transaction.category.color}
+                        size="sm"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        {getTransactionIcon(transaction.type)}
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex-1 min-w-0">
@@ -286,18 +345,48 @@ function DayView() {
                       <p className="text-sm sm:text-base font-medium text-gray-900 truncate">
                         {transaction.description || 'No description'}
                       </p>
-                      {transaction.type && (
-                        <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 flex-shrink-0">
-                          {TRANSACTION_TYPES[transaction.type.toString() as keyof typeof TRANSACTION_TYPES]}
-                        </span>
-                      )}
                     </div>
                     
                     <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3 lg:space-x-4 text-xs sm:text-sm text-gray-500">
-                      <span>Transaction ID: {transaction.id.slice(0, 8)}...</span>
+                      <span>{getTransactionTypeName(transaction.type)}</span>
+                      {transaction.category && (
+                        <>
+                          <span className="hidden sm:inline">•</span>
+                          <span>{transaction.category.name}</span>
+                        </>
+                      )}
                       {transaction.account && (
-                        <span className="hidden sm:inline flex items-center">
-                          • {getAccountIcon(transaction.account.type)} 
+                        <>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="flex items-center gap-1">
+                            {getAccountIcon(transaction.account.type)} 
+                            <span className="ml-1">{transaction.account.name}</span>
+                          </span>
+                        </>
+                      )}
+                      {transaction.fromAccount && transaction.toAccount && (
+                        <>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="flex items-center gap-1">
+                            {getAccountIcon(transaction.fromAccount.type)} 
+                            <span className="ml-1">{transaction.fromAccount.name}</span>
+                            <ArrowUpDown className="w-3 h-3 mx-1" />
+                            {getAccountIcon(transaction.toAccount.type)} 
+                            <span className="ml-1">{transaction.toAccount.name}</span>
+                          </span>
+                        </>
+                      )}
+                      {transaction.debt && (
+                        <>
+                          <span className="hidden sm:inline">•</span>
+                          <span>Debt: {transaction.debt.personName}</span>
+                        </>
+                      )}
+                      {transaction.paymentMode && (
+                        <>
+                          <span className="hidden md:inline">•</span>
+                          <span className="hidden md:inline flex items-center gap-1">
+                            {getPaymentModeIcon(transaction.paymentMode.type)} 
                           <span className="ml-1">{transaction.account.name}</span>
                         </span>
                       )}
@@ -306,26 +395,37 @@ function DayView() {
                           • {getPaymentModeIcon(transaction.paymentMode.type)} 
                           <span className="ml-1">{transaction.paymentMode.name}</span>
                         </span>
+                        </>
                       )}
-                    </div>
-                  </div>
-                </div>
-                
+                      {transaction.tags && transaction.tags.length > 0 && (
+                        <>
+                          <span className="hidden lg:inline">•</span>
+                          <span className="hidden lg:inline">
+                            Tags: {transaction.tags.slice(0, 2).map(tag => tag.name).join(', ')}
+                            {transaction.tags.length > 2 && ` +${transaction.tags.length - 2}`}
+                        </>
+                      )}
+                      <span className="block sm:hidden text-gray-400">
+                        {formatTime(transaction.txnTime)}
                 <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
                   <div className="text-right">
                     <p className={`text-sm sm:text-base font-semibold ${getAmountColor(transaction.type)}`}>
-                      {transaction.type === 1 ? '-' : transaction.type === 2 ? '+' : ''}
+                      {(transaction.type === 1 || transaction.type === 5) ? '-' : 
+                        (transaction.type === 2 || transaction.type === 6) ? '+' : ''}
                       {formatCurrency(transaction.amount)}
+                    </p>
+                    <p className="text-xs text-gray-500 hidden sm:block">
+                      {formatTime(transaction.txnTime)}
                     </p>
                   </div>
                   
                   <div className="flex items-center space-x-1 sm:space-x-2">
-                    <button
-                      onClick={() => navigate(`/transactions/edit/${transaction.id}`)}
+                    <Link
+                      to={`/transactions/edit/${transaction.id}`}
                       className="p-1.5 sm:p-2 text-gray-400 hover:text-indigo-600 transition-colors rounded-md hover:bg-gray-50"
                     >
                       <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </button>
+                    </Link>
                     <button
                       onClick={() => setTransactionToDelete({ 
                         id: transaction.id, 
@@ -343,6 +443,29 @@ function DayView() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-6 flex justify-center items-center gap-4">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+            disabled={currentPage === 0}
+            className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-900 disabled:opacity-50"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <span className="text-sm text-gray-500">
+            Page {currentPage + 1} of {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+            disabled={currentPage >= totalPages - 1}
+            className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-900 disabled:opacity-50"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal

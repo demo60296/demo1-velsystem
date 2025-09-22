@@ -87,8 +87,20 @@ export const useDebtSummary = () => {
     queryKey: ['debts', 'summary'],
     queryFn: async () => {
       const response = await apiClient.get('/debts/summary');
-      return response.data.data;
+      return response.data.data || { totalPayable: 0, totalReceivable: 0 };
     },
+  });
+};
+
+// Get debt transaction summary by debt ID
+export const useDebtTransactionSummary = (debtId: string) => {
+  return useQuery<{ totalPaid: number; totalReceived: number }>({
+    queryKey: ['debt-transaction-summary', debtId],
+    queryFn: async () => {
+      const response = await apiClient.get(`/transactions/${debtId}/summary`);
+      return response.data.data || { totalPaid: 0, totalReceived: 0 };
+    },
+    enabled: !!debtId,
   });
 };
 

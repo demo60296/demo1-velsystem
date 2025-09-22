@@ -18,7 +18,8 @@ import {
   useDebts,
   useLendingDebts,
   useBorrowingDebts,
-  useDeleteDebt
+  useDeleteDebt,
+  useDebtSummary
 } from '../../hooks/useDebts';
 import { DEBT_TYPES } from '../../types/debt';
 import DebtTypeModal from '../../components/DebtTypeModal';
@@ -36,9 +37,10 @@ function Debts() {
   const [debtToDelete, setDebtToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Only fetch data for the active tab to avoid unnecessary API calls
-  const { data: allDebts, isLoading: allLoading } = useDebts(currentPage, pageSize);
-  const { data: lendingDebts, isLoading: lendingLoading } = useLendingDebts(currentPage, pageSize);
-  const { data: borrowingDebts, isLoading: borrowingLoading } = useBorrowingDebts(currentPage, pageSize);
+  const { data: allDebts, isLoading: allLoading } = useDebts(currentPage, pageSize, activeTab === 0);
+  const { data: lendingDebts, isLoading: lendingLoading } = useLendingDebts(currentPage, pageSize, activeTab === 1);
+  const { data: borrowingDebts, isLoading: borrowingLoading } = useBorrowingDebts(currentPage, pageSize, activeTab === 2);
+  const { data: summary } = useDebtSummary();
   
   const deleteDebt = useDeleteDebt();
   const { formatCurrency } = useFormatters();
@@ -133,8 +135,7 @@ function Debts() {
           <div className="flex flex-col">
             <span className="text-sm text-gray-500">Total Lent</span>
             <span className="text-xl font-bold text-gray-900">
-              {formatCurrency(0)}
-              {/* {formatCurrency(summary?.totalPayable ?? 0)} */}
+              {formatCurrency(summary?.totalReceivable ?? 0)}
             </span>
           </div>
         </div>
@@ -147,8 +148,7 @@ function Debts() {
           <div className="flex flex-col">
             <span className="text-sm text-gray-500">Total Borrowed</span>
             <span className="text-xl font-bold text-gray-900">
-              {formatCurrency(0)}
-              {/* {formatCurrency(summary?.totalReceivable ?? 0)} */}
+              {formatCurrency(summary?.totalPayable ?? 0)}
             </span>
           </div>
         </div>

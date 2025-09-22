@@ -17,7 +17,7 @@ import {
 } from '../types/debt';
 
 // Debt hooks
-export const useDebts = (page = 0, size = 10) => {
+export const useDebts = (page = 0, size = 10, enabled = true) => {
   return useQuery<PaginatedDebts>({
     queryKey: ['debts', page, size],
     queryFn: async () => {
@@ -32,6 +32,7 @@ export const useDebts = (page = 0, size = 10) => {
         last: true
       };
     },
+    enabled,
   });
 };
 
@@ -46,7 +47,7 @@ export const useDebt = (id: string) => {
   });
 };
 
-export const useLendingDebts = (page = 0, size = 10) => {
+export const useLendingDebts = (page = 0, size = 10, enabled = true) => {
   return useQuery<PaginatedDebts>({
     queryKey: ['debts', 'lending', page, size],
     queryFn: async () => {
@@ -61,10 +62,11 @@ export const useLendingDebts = (page = 0, size = 10) => {
         last: true
       };
     },
+    enabled,
   });
 };
 
-export const useBorrowingDebts = (page = 0, size = 10) => {
+export const useBorrowingDebts = (page = 0, size = 10, enabled = true) => {
   return useQuery<PaginatedDebts>({
     queryKey: ['debts', 'borrowing', page, size],
     queryFn: async () => {
@@ -79,6 +81,7 @@ export const useBorrowingDebts = (page = 0, size = 10) => {
         last: true
       };
     },
+    enabled,
   });
 };
 

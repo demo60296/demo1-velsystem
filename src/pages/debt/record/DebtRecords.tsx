@@ -14,6 +14,7 @@ import {
   Coins,
   ChevronLeft,
   ChevronRight,
+  Settings,
 } from 'lucide-react';
 import {
   useDebt,
@@ -23,9 +24,11 @@ import {
   useAdjustmentDebtTransactions,
   useDeleteDebtRecord,
   useDebtTransactionSummary,
+  useCreateAdjustmentDebtTransaction,
 } from '../../../hooks/useDebts';
 import { DEBT_TRANSACTION_TYPES } from '../../../types/debt';
 import DebtRecordTypeModal from '../../../components/DebtRecordTypeModal';
+import DebtAdjustmentModal from '../../../components/DebtAdjustmentModal';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 import { useFormatters } from '../../../hooks/useFormatters';
 
@@ -39,6 +42,7 @@ function DebtRecords() {
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize] = useState(10);
   const [isRecordTypeModalOpen, setIsRecordTypeModalOpen] = useState(false);
+  const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<{ id: string; description: string } | null>(null);
   const { data: summary } = useDebtTransactionSummary(debtId || '');
   const { data: debt } = useDebt(debtId || '');
@@ -50,6 +54,7 @@ function DebtRecords() {
   const { data: adjustmentTransactions, isLoading: adjustmentLoading } = useAdjustmentDebtTransactions(currentPage, pageSize, activeTab === 3);
 
   const deleteRecord = useDeleteDebtRecord();
+  const createAdjustment = useCreateAdjustmentDebtTransaction();
   const { formatCurrency } = useFormatters();
 
   const getCurrentData = () => {
@@ -72,6 +77,20 @@ function DebtRecords() {
     }
   };
 
+  const handleAdjustmentSubmit = async (data: {
+    type: string;
+    txnDate: string;
+    txnTime: string;
+    amount: number;
+    description: string;
+  }) => {
+    try {
+      await createAdjustment.mutateAsync(data);
+      setIsAdjustmentModalOpen(false);
+    } catch (error) {
+      console.error('Failed to create adjustment:', error);
+    }
+  };
   const getTransactionIcon = (type: number) => {
     if (type === 5) return <TrendingDown className="w-5 h-5 text-red-600" />;
     if (type === 6) return <TrendingUp className="w-5 h-5 text-green-600" />;
@@ -115,13 +134,22 @@ function DebtRecords() {
             {debt ? `With ${debt.personName}` : 'Track your debt activity'}
           </p>
         </div>
-        <button
-          onClick={() => setIsRecordTypeModalOpen(true)}
-          className="mt-3 sm:mt-0 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl shadow hover:bg-indigo-700 transition"
-        >
-          <Plus className="w-4 h-4" />
-          Add Record
-        </button>
+        <div className="flex items-center gap-2 mt-3 sm:mt-0">
+          <button
+            onClick={() => setIsAdjustmentModalOpen(true)}
+            className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl shadow hover:bg-blue-700 transition"
+          >
+            <Settings className="w-4 h-4" />
+            Adjustment
+          </button>
+          <button
+            onClick={() => setIsRecordTypeModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl shadow hover:bg-indigo-700 transition"
+          >
+            <Plus className="w-4 h-4" />
+            Add Record
+          </button>
+        </div>
       </div>
 
       {/* Summary Section */}
@@ -203,13 +231,24 @@ function DebtRecords() {
               : `No ${tabs[activeTab].toLowerCase()} transactions found`
             }
           </p>
-          <button
-            onClick={() => setIsRecordTypeModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl shadow hover:bg-indigo-700 transition"
-          >
-            <Plus className="w-4 h-4" />
-            Add Record
-          </button>
+          <div className="flex justify-center gap-2">
+            {activeTab === 3 && (
+              <button
+                onClick={() => setIsAdjustmentModalOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition"
+              >
+                <Settings className="w-4 h-4" />
+                Add Adjustment
+              </button>
+            )}
+            <button
+              onClick={() => setIsRecordTypeModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl shadow hover:bg-indigo-700 transition"
+            >
+              <Plus className="w-4 h-4" />
+              Add Record
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -247,12 +286,14 @@ function DebtRecords() {
                   </div>
 
                   <div className="flex items-center gap-1">
-                    <Link
-                      to={`/debts/${debtId}/records/edit/${transaction.id}`}
-                      className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-indigo-600"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Link>
+                    {transaction.type !== 7 && (
+                      <Link
+                        to={`/debts/${debtId}/records/edit/${transaction.id}`}
+                        className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-indigo-600"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Link>
+                    )}
                     <button
                       onClick={() => setRecordToDelete({ id: transaction.id, description: transaction.description })}
                       disabled={deleteRecord.isPending}
@@ -297,10 +338,16 @@ function DebtRecords() {
         onClose={() => setIsRecordTypeModalOpen(false)}
         debtId={debtId || ''}
       />
+      <DebtAdjustmentModal
+        isOpen={isAdjustmentModalOpen}
+        onClose={() => setIsAdjustmentModalOpen(false)}
+        onSubmit={handleAdjustmentSubmit}
+        isPending={createAdjustment.isPending}
+      />
       <ConfirmationModal
         isOpen={!!recordToDelete}
         onClose={() => setRecordToDelete(null)}
-        onConfirm={handleDeleteRecord}
+        onConfirm={handleDeleteTransaction}
         title="Delete Record"
         message={`Are you sure you want to delete "${recordToDelete?.description}"?`}
         confirmText="Delete"

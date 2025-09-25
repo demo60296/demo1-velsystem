@@ -178,7 +178,6 @@ function AccountForm() {
     }
   };
 
-
   const getAccountIcon = (tabIndex: number) => {
     switch (tabIndex) {
       case 0: return <Building2 className="w-5 h-5" />;
@@ -207,7 +206,7 @@ function AccountForm() {
           <div className="h-6 sm:h-8 bg-gray-200 rounded w-32 sm:w-48 mb-4 sm:mb-6"></div>
           <div className="space-y-4 sm:space-y-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-lg shadow p-4 sm:p-6">
+              <div key={i} className="bg-white rounded-xl shadow p-4 sm:p-6">
                 <div className="h-4 sm:h-6 bg-gray-200 rounded w-24 sm:w-32 mb-3 sm:mb-4"></div>
                 <div className="h-8 sm:h-10 bg-gray-200 rounded"></div>
               </div>
@@ -220,29 +219,28 @@ function AccountForm() {
 
   return (
     <div className="p-3 sm:p-4 lg:p-6 max-w-7xl mx-auto">
-      <div className="mb-5 sm:mb-4">
+      {/* Header */}
+      <div className="mb-4">
         <button
           onClick={() => navigate('/accounts')}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-1 text-sm sm:text-base"
+          className="flex items-center text-gray-600 hover:text-gray-900 mb-2 text-sm sm:text-base"
         >
-          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
+          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
           Back to Accounts
         </button>
-        <h1 className="text-2xl sm:text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-gray-900">
           {isEditing ? 'Edit Account' : 'Add Account'}
         </h1>
-        <p className="text-sm sm:text-base text-gray-600">
+        <p className="text-sm text-gray-500">
           {isEditing ? 'Update account details' : 'Create a new account for tracking your finances'}
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-2 sm:space-y-4 lg:space-y-6">
-        {/* Account Type Tabs */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Account Type Selection */}
         {!isEditing && (
-          <div className="bg-white rounded-lg shadow p-4">
-            <label className="block text-sm sm:text-base font-medium text-gray-700 mb-1 sm:mb-2">
-              Account Type
-            </label>
+          <div className="bg-white rounded-xl shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Type</h3>
             <div className="flex bg-gray-100 rounded-lg p-1">
               {tabs.map((tab, index) => {
                 const active = activeTab === index;
@@ -251,10 +249,11 @@ function AccountForm() {
                     key={tab}
                     type="button"
                     onClick={() => setActiveTab(index)}
-                    className={`flex-1 text-xs sm:text-sm font-medium rounded-lg py-2 transition-all duration-200 ${active
-                      ? "bg-white shadow text-black"
-                      : "text-gray-500 hover:text-black"
-                      }`}
+                    className={`flex-1 text-sm font-medium rounded-lg py-2 transition-all duration-200 ${
+                      active
+                        ? "bg-white shadow text-gray-900"
+                        : "text-gray-500 hover:text-gray-900"
+                    }`}
                   >
                     {tab}
                   </button>
@@ -265,27 +264,116 @@ function AccountForm() {
         )}
 
         {/* Account Name */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <label htmlFor="name" className="block text-sm sm:text-base font-medium text-gray-700 mb-2">
-            Account Name
-          </label>
-          <input
-            {...register('name', { required: 'Account name is required' })}
-            type="text"
-            id="name"
-            placeholder="Enter account name"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base"
-          />
-          {errors.name && (
-            <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name.message}</p>
-          )}
+        <div className="bg-white rounded-xl shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Details</h3>
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              Account Name
+            </label>
+            <input
+              {...register('name', { required: 'Account name is required' })}
+              type="text"
+              id="name"
+              placeholder="Enter account name"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            {errors.name && (
+              <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+            )}
+          </div>
         </div>
 
         {/* Bank Account Fields */}
         {activeTab === 0 && (
           <>
-            <div className="bg-white rounded-lg shadow p-4">
-              <label htmlFor="currentBalance" className="block text-sm sm:text-base font-medium text-gray-700 mb-2">
+            <div className="bg-white rounded-xl shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Balance Information</h3>
+              <div>
+                <label htmlFor="currentBalance" className="block text-sm font-medium text-gray-700 mb-2">
+                  Current Balance
+                </label>
+                <input
+                  {...register('currentBalance', {
+                    required: 'Current balance is required',
+                    min: { value: 0, message: 'Balance cannot be negative' }
+                  })}
+                  type="number"
+                  step="0.01"
+                  id="currentBalance"
+                  placeholder="0.00"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                {errors.currentBalance && (
+                  <p className="mt-1 text-sm text-red-600">{errors.currentBalance.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Linked Payment Modes */}
+            <div className="bg-white rounded-xl shadow p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Payment Modes</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {paymentModes.length === 0
+                      ? 'No payment modes added yet'
+                      : `${paymentModes.length} payment mode(s) linked to this account`
+                    }
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPaymentModeModalOpen(true)}
+                  className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Payment Mode
+                </button>
+              </div>
+
+              {paymentModes.length > 0 ? (
+                <div className="grid gap-3">
+                  {paymentModes.map((mode, index) => {
+                    const { icon, color } = getPaymentModeIconAndColor(mode.type);
+                    return (
+                      <div key={index} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center space-x-3">
+                          <div className={`p-2 rounded-lg ${color}`}>
+                            {icon}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{mode.name}</p>
+                            <p className="text-sm text-gray-500">{PAYMENT_MODE_TYPES[mode.type]}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removePaymentMode(index)}
+                          className="p-2 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Smartphone className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm">No payment modes added yet</p>
+                  <p className="text-xs text-gray-400 mt-1">Add payment modes to track transaction methods</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Wallet Fields */}
+        {activeTab === 1 && (
+          <div className="bg-white rounded-xl shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Balance Information</h3>
+            <div>
+              <label htmlFor="currentBalance" className="block text-sm font-medium text-gray-700 mb-2">
                 Current Balance
               </label>
               <input
@@ -297,188 +385,112 @@ function AccountForm() {
                 step="0.01"
                 id="currentBalance"
                 placeholder="0.00"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               />
               {errors.currentBalance && (
-                <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.currentBalance.message}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.currentBalance.message}</p>
               )}
             </div>
-
-            {/* Linked Payment Modes */}
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <label className="block text-sm sm:text-base font-medium text-gray-700">
-                    Linked Payment Modes
-                  </label>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                    {paymentModes.length === 0
-                      ? 'No payment modes added yet'
-                      : `${paymentModes.length} payment mode(s) linked to this account`
-                    }
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsPaymentModeModalOpen(true)}
-                  className="inline-flex items-center px-3 py-2 text-xs sm:text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-                >
-                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                  Add
-                </button>
-              </div>
-
-              {paymentModes.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                  {paymentModes.map((mode, index) => {
-                    const { icon, color } = getPaymentModeIconAndColor(mode.type);
-                    return (
-                      <div key={index} className="flex items-center justify-between p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                        <div className="flex items-center space-x-3">
-                          <div className={`p-2 rounded-full ${color}`}>
-                            {icon}
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{mode.name}</p>
-                            <p className="text-xs text-gray-500">{PAYMENT_MODE_TYPES[mode.type]}</p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removePaymentMode(index)}
-                          className="p-2 rounded-lg hover:bg-gray-300 text-gray-400 hover:text-red-600 disabled:opacity-50"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-4 text-xs sm:text-sm text-gray-500">
-                  No payment modes added yet
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* Wallet Fields */}
-        {activeTab === 1 && (
-          <div className="bg-white rounded-lg shadow p-4">
-            <label htmlFor="currentBalance" className="block text-sm sm:text-base font-medium text-gray-700 mb-2">
-              Current Balance
-            </label>
-            <input
-              {...register('currentBalance', {
-                required: 'Current balance is required',
-                min: { value: 0, message: 'Balance cannot be negative' }
-              })}
-              type="number"
-              step="0.01"
-              id="currentBalance"
-              placeholder="0.00"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base"
-            />
-            {errors.currentBalance && (
-              <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.currentBalance.message}</p>
-            )}
           </div>
         )}
 
         {/* Credit Card Fields */}
         {activeTab === 2 && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              <div className="bg-white rounded-lg shadow p-4">
-                <label htmlFor="currentAvailableLimit" className="block text-sm sm:text-base font-medium text-gray-700 mb-2">
-                  Current Available Limit
-                </label>
-                <input
-                  {...register('currentAvailableLimit', {
-                    required: 'Available limit is required',
-                    min: { value: 0, message: 'Limit cannot be negative' }
-                  })}
-                  type="number"
-                  step="0.01"
-                  id="currentAvailableLimit"
-                  placeholder="0.00"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base"
-                />
-                {errors.currentAvailableLimit && (
-                  <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.currentAvailableLimit.message}</p>
-                )}
-              </div>
+            <div className="bg-white rounded-xl shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Credit Limits</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="currentAvailableLimit" className="block text-sm font-medium text-gray-700 mb-2">
+                    Current Available Limit
+                  </label>
+                  <input
+                    {...register('currentAvailableLimit', {
+                      required: 'Available limit is required',
+                      min: { value: 0, message: 'Limit cannot be negative' }
+                    })}
+                    type="number"
+                    step="0.01"
+                    id="currentAvailableLimit"
+                    placeholder="0.00"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  {errors.currentAvailableLimit && (
+                    <p className="mt-1 text-sm text-red-600">{errors.currentAvailableLimit.message}</p>
+                  )}
+                </div>
 
-              <div className="bg-white rounded-lg shadow p-4">
-                <label htmlFor="totalCreditLimit" className="block text-sm sm:text-base font-medium text-gray-700 mb-2">
-                  Total Credit Limit
-                </label>
-                <input
-                  {...register('totalCreditLimit', {
-                    required: 'Total credit limit is required',
-                    min: { value: 0, message: 'Limit cannot be negative' }
-                  })}
-                  type="number"
-                  step="0.01"
-                  id="totalCreditLimit"
-                  placeholder="0.00"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base"
-                />
-                {errors.totalCreditLimit && (
-                  <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.totalCreditLimit.message}</p>
-                )}
+                <div>
+                  <label htmlFor="totalCreditLimit" className="block text-sm font-medium text-gray-700 mb-2">
+                    Total Credit Limit
+                  </label>
+                  <input
+                    {...register('totalCreditLimit', {
+                      required: 'Total credit limit is required',
+                      min: { value: 0, message: 'Limit cannot be negative' }
+                    })}
+                    type="number"
+                    step="0.01"
+                    id="totalCreditLimit"
+                    placeholder="0.00"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  {errors.totalCreditLimit && (
+                    <p className="mt-1 text-sm text-red-600">{errors.totalCreditLimit.message}</p>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              <div className="bg-white rounded-lg shadow p-4">
-                <label htmlFor="billingCycleStartDate" className="block text-sm sm:text-base font-medium text-gray-700 mb-2">
-                  Billing Cycle Start Date
-                </label>
-                <input
-                  {...register('billingCycleStartDate', { required: 'Billing cycle start date is required' })}
-                  type="date"
-                  id="billingCycleStartDate"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base"
-                />
-                {errors.billingCycleStartDate && (
-                  <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.billingCycleStartDate.message}</p>
-                )}
-              </div>
+            <div className="bg-white rounded-xl shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Billing Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="billingCycleStartDate" className="block text-sm font-medium text-gray-700 mb-2">
+                    Billing Cycle Start Date
+                  </label>
+                  <input
+                    {...register('billingCycleStartDate', { required: 'Billing cycle start date is required' })}
+                    type="date"
+                    id="billingCycleStartDate"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  {errors.billingCycleStartDate && (
+                    <p className="mt-1 text-sm text-red-600">{errors.billingCycleStartDate.message}</p>
+                  )}
+                </div>
 
-              <div className="bg-white rounded-lg shadow p-4">
-                <label htmlFor="paymentDueDate" className="block text-sm sm:text-base font-medium text-gray-700 mb-2">
-                  Payment Due Date
-                </label>
-                <input
-                  {...register('paymentDueDate', { required: 'Payment due date is required' })}
-                  type="date"
-                  id="paymentDueDate"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base"
-                />
-                {errors.paymentDueDate && (
-                  <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.paymentDueDate.message}</p>
-                )}
+                <div>
+                  <label htmlFor="paymentDueDate" className="block text-sm font-medium text-gray-700 mb-2">
+                    Payment Due Date
+                  </label>
+                  <input
+                    {...register('paymentDueDate', { required: 'Payment due date is required' })}
+                    type="date"
+                    id="paymentDueDate"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  {errors.paymentDueDate && (
+                    <p className="mt-1 text-sm text-red-600">{errors.paymentDueDate.message}</p>
+                  )}
+                </div>
               </div>
             </div>
           </>
         )}
 
         {/* Preview */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <label className="block text-sm sm:text-base font-medium text-gray-700 mb-2 sm:mb-2">
-            Preview
-          </label>
-          <div className="flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
+        <div className="bg-white rounded-xl shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Preview</h3>
+          <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
             <div className={`p-3 rounded-full ${getAccountColor(activeTab)}`}>
               {getAccountIcon(activeTab)}
             </div>
             <div>
-              <p className="text-sm sm:text-base font-medium text-gray-900">
+              <p className="font-medium text-gray-900">
                 {watch('name') || 'Account Name'}
               </p>
-              <p className="text-xs sm:text-sm text-gray-500">
+              <p className="text-sm text-gray-500">
                 {tabs[activeTab]}
                 {activeTab === 0 && paymentModes.length > 0 && ` • ${paymentModes.length} payment mode(s)`}
               </p>
@@ -486,19 +498,29 @@ function AccountForm() {
           </div>
         </div>
 
-        {/* Submit Button */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+        {/* Error Messages */}
+        {(createBankAccount.error || createWallet.error || createCreditCard.error ||
+          updateBankAccount.error || updateWallet.error || updateCreditCard.error) && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <div className="text-sm text-red-600">
+              Failed to save account. Please try again.
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex gap-3">
           <button
             type="submit"
             disabled={isPending}
-            className="flex-1 bg-indigo-600 text-white py-2.5 sm:py-3 px-4 rounded-md hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm sm:text-base font-medium"
+            className="flex-1 bg-indigo-600 text-white py-3 px-4 rounded-xl hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
           >
             {isPending ? 'Saving...' : isEditing ? 'Update Account' : 'Create Account'}
           </button>
           <button
             type="button"
             onClick={() => navigate('/accounts')}
-            className="px-4 sm:px-6 py-2.5 sm:py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-sm sm:text-base font-medium"
+            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
           >
             Cancel
           </button>
